@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Party Room</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/room.css">
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="room-container">
+        <!-- Header -->
+        <header class="room-header">
+            <div class="room-info">
+                <h1>🎬 Watch Party</h1>
+                <div class="room-code">
+                    Room Code: <span id="room-code-display" style="font-family: sans-serif;">LOADING...</span>
+                </div>
+            </div>
+            <div class="user-count" style="font-family: sans-serif">
+                👥 <span id="user-count"">0</span> users
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="room-main">
+            <!-- Video Section -->
+            <div class="video-section">
+                <div class="video-container">
+                    <div id="youtube-player">
+                        <div class="no-video">
+                            <h3>No video loaded</h3>
+                            <p>Paste a YouTube URL below to start watching together!</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="video-controls">
+                    <div class="url-input">
+                        <input 
+                            type="text" 
+                            id="video-url-input" 
+                            placeholder="Paste YouTube URL here..."
+                        >
+                        <button id="load-video-btn" class="btn btn-primary">
+                            Load Video
+                        </button>
+                    </div>
+                    
+                    <div class="playback-controls">
+                        <button id="play-pause-btn" class="btn btn-secondary" disabled>
+                            ▶️ Play
+                        </button>
+                        <span class="video-info" id="video-info"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <div class="chat-header">
+                    <h3>💬 Chat</h3>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="system-message">
+                        Welcome to the room! Start chatting with other viewers.
+                    </div>
+                </div>
+                
+                <div class="chat-input">
+                    <input 
+                        type="text" 
+                        id="chat-input" 
+                        placeholder="Type your message..."
+                        maxlength="500"
+                    >
+                    <button id="send-message-btn" class="btn btn-primary">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Loading room...</p>
+        </div>
+    </div>
+
+    <!-- Error modal -->
+    <div id="error-modal" class="error-modal hidden">
+        <div class="error-content">
+            <h3>❌ Error</h3>
+            <p id="error-message-text"></p>
+            <button id="error-close-btn" class="btn btn-secondary">OK</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="js/room.js"></script>
+</body>
+</html>

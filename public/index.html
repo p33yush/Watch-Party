@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Party - Home</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee+Spice:wght@300;400;500;600;700;800;900&family=WDXL+Lubrifont+TC&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Watch Party</h1>
+            <p>Watch YouTube videos together with friends in real-time!</p>
+        </header>
+        
+        <main>
+            <div class="action-section">
+                <div class="create-room">
+                    <h2>Create New Room</h2>
+                    <button id="create-room-btn" class="btn btn-primary">
+                        Create Room
+                    </button>
+                </div>
+                
+                <div class="divider">OR</div>
+                
+                <div class="join-room">
+                    <h2>Join Existing Room</h2>
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="room-code-input" 
+                            placeholder="Enter 6-digit room code"
+                            maxlength="6"
+                        >
+                        <button id="join-room-btn" class="btn btn-secondary">
+                            Join Room
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="error-message" class="error hidden"></div>
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Creating room...</p>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/main.js"></script>
+</body>
+</html>
