@@ -17,7 +17,7 @@ const io = socketIo(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // MongoDB connection
 const mongoURI = 'mongodb+srv://01pittypatty:passMONGO@cluster0.i2e1e7y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
