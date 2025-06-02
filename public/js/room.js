@@ -4,6 +4,8 @@ let player;
 let currentRoomCode = '';
 let isHost = false;
 let username = 'User' + Math.floor(Math.random() * 1000);
+let isRemoteUpdate = false;
+
 
 // DOM elements
 const roomCodeDisplay = document.getElementById('room-code-display');
@@ -112,7 +114,7 @@ async function initializeRoom() {
 
 // Initialize Socket.IO
 function initializeSocket() {
-    socket = io('https://watch-party-earz.onrender.com');
+    socket = io();
     
     // Join room
     socket.emit('join-room', { roomCode: currentRoomCode, username });
@@ -137,19 +139,24 @@ function initializeSocket() {
         addChatMessage(`Video changed: ${data.title || 'New video'}`, true);
     });
     
-    socket.on('video-play', (data) => {
-        if (player && player.playVideo) {
-            player.seekTo(data.currentTime, true);
-            player.playVideo();
-        }
-    });
-    
-    socket.on('video-pause', (data) => {
-        if (player && player.pauseVideo) {
-            player.seekTo(data.currentTime, true);
-            player.pauseVideo();
-        }
-    });
+   socket.on('video-play', (data) => {
+    if (!player) return;
+
+    isRemoteUpdate = true;
+    player.seekTo(data.currentTime, true);
+    player.playVideo();
+    setTimeout(() => isRemoteUpdate = false, 1000);
+});
+
+socket.on('video-pause', (data) => {
+    if (!player) return;
+
+    isRemoteUpdate = true;
+    player.seekTo(data.currentTime, true);
+    player.pauseVideo();
+    setTimeout(() => isRemoteUpdate = false, 1000);
+});
+
     
     socket.on('video-seek', (data) => {
         if (player && player.seekTo) {
@@ -214,14 +221,11 @@ function onPlayerReady(event) {
 }
 
 function onPlayerStateChange(event) {
+
     const state = event.data;
-    
     // Don't sync if this change was triggered by a socket event
-    if (window.skipNextStateChange) {
-        window.skipNextStateChange = false;
-        return;
-    }
-    
+    if (isRemoteUpdate) return;
+
     const currentTime = player.getCurrentTime();
     
     if (state === YT.PlayerState.PLAYING) {
