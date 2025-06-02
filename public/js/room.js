@@ -112,7 +112,7 @@ async function initializeRoom() {
 
 // Initialize Socket.IO
 function initializeSocket() {
-    socket = io();
+    socket = io('https://watch-party-d8ik.onrender.com');
     
     // Join room
     socket.emit('join-room', { roomCode: currentRoomCode, username });
