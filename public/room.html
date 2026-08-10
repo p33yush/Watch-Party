@@ -1,27 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Watch Party Room</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/room.css">
-   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap"
+        rel="stylesheet">
+
 </head>
+
 <body>
     <div class="room-container">
-        <!-- Header -->
         <header class="room-header">
             <div class="room-info">
-                <h1>🎬 Watch Party</h1>
+                <h1><img src="css/movie-svgrepo-com.svg" alt="Movie" class="title-icon"> Watch Party</h1>
                 <div class="room-code">
                     Room Code: <span id="room-code-display" style="font-family: sans-serif;">LOADING...</span>
                 </div>
             </div>
-            <div class="user-count" style="font-family: sans-serif">
-                👥 <span id="user-count"">0</span> users
+            <div class="user-count" style="font-family: Nunito">
+                <img src="css/user-svgrepo-com.svg" class="ui-icon" alt="Users"> <span id="user-count">0</span> users
             </div>
         </header>
 
@@ -37,47 +42,38 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="video-controls">
                     <div class="url-input">
-                        <input 
-                            type="text" 
-                            id="video-url-input" 
-                            placeholder="Paste YouTube URL here..."
-                        >
+                        <input type="text" id="video-url-input" placeholder="Paste YouTube URL here...">
                         <button id="load-video-btn" class="btn btn-primary">
                             Load Video
                         </button>
                     </div>
                     <div class="playback-controls">
                         <button id="play-pause-btn" class="btn btn-secondary" disabled>
-                            ▶️ Play
+                            <img src="css/play-svgrepo-com.svg" alt="Play" class="ui-icon"> Play
                         </button>
                         <span class="video-info" id="video-info"></span>
                     </div>
-                    
+
                 </div>
             </div>
 
             <!-- Chat Section -->
             <div class="chat-section">
                 <div class="chat-header">
-                    <h3>💬 Chat</h3>
+                    <h3><img src="css/chat-chat-svgrepo-com.svg" class="ui-icon" alt="Chat"> Chat</h3>
                 </div>
-                
+
                 <div class="chat-messages" id="chat-messages">
                     <div class="system-message">
                         Welcome to the room! Start chatting with other viewers.
                     </div>
                 </div>
-                
+
                 <div class="chat-input">
-                    <input 
-                        type="text" 
-                        id="chat-input" 
-                        placeholder="Type your message..."
-                        maxlength="500"
-                    >
+                    <input type="text" id="chat-input" placeholder="Type your message..." maxlength="500">
                     <button id="send-message-btn" class="btn btn-primary">
                         Send
                     </button>
@@ -85,6 +81,16 @@
             </div>
         </main>
     </div>
+
+    <div id="username-modal" class="username-modal hidden">
+        <div class="username-content">
+            <h3><img src="css/welcome-svgrepo-com.svg" class="ui-icon" alt="Welcome"> Welcome!</h3>
+            <p>Enter your display name to join the room</p>
+            <input type="text" id="username-input" placeholder="Your name..." maxlength="20" autofocus>
+            <button id="username-submit-btn" class="btn btn-primary">Join Room</button>
+        </div>
+    </div>
+
 
     <!-- Loading overlay -->
     <div id="loading-overlay" class="loading-overlay hidden">
@@ -108,4 +114,5 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="js/room.js"></script>
 </body>
+
 </html>

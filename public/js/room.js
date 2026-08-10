@@ -3,7 +3,7 @@ let socket;
 let player;
 let currentRoomCode = '';
 let isHost = false;
-let username = 'User' + Math.floor(Math.random() * 1000);
+let username = '';
 let isRemoteUpdate = false;
 
 
@@ -68,21 +68,30 @@ function addChatMessage(message, isSystem = false) {
         const now = new Date();
         const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
-        messageDiv.innerHTML = `
-            <div class="message-user">${message.username}</div>
-            <div class="message-text">${message.text}</div>
-            <div class="message-time">${timeString}</div>
-        `;
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message-user';
+        userDiv.textContent = message.username;
+        
+        const textDiv = document.createElement('div');
+        textDiv.className = 'message-text';
+        textDiv.textContent = message.text;
+        
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'message-time';
+        timeDiv.textContent = timeString;
+        
+        messageDiv.appendChild(userDiv);
+        messageDiv.appendChild(textDiv);
+        messageDiv.appendChild(timeDiv);
     }
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+
 // Initialize room
 async function initializeRoom() {
-    showLoading(true);
-    
     currentRoomCode = getRoomCodeFromURL();
     if (!currentRoomCode) {
         showError('No room code found. Please return to homepage.');
@@ -97,14 +106,32 @@ async function initializeRoom() {
             return;
         }
         
-        const roomData = await response.json();
         roomCodeDisplay.textContent = currentRoomCode;
         
-        // Initialize Socket.IO
-        initializeSocket();
+        // Show username modal
+        const usernameModal = document.getElementById('username-modal');
+        const usernameInput = document.getElementById('username-input');
+        const usernameSubmitBtn = document.getElementById('username-submit-btn');
         
-        showLoading(false);
-        addChatMessage(`Welcome to room ${currentRoomCode}!`, true);
+        usernameModal.classList.remove('hidden');
+        usernameInput.focus();
+        
+        const joinWithUsername = () => {
+            const name = usernameInput.value.trim();
+            if (!name) {
+                usernameInput.style.borderColor = '#ff6b6b';
+                return;
+            }
+            username = name;
+            usernameModal.classList.add('hidden');
+            initializeSocket();
+            addChatMessage(`Welcome to room ${currentRoomCode}!`, true);
+        };
+        
+        usernameSubmitBtn.addEventListener('click', joinWithUsername);
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinWithUsername();
+        });
         
     } catch (error) {
         console.error('Error initializing room:', error);
@@ -140,21 +167,21 @@ function initializeSocket() {
     });
     
    socket.on('video-play', (data) => {
-    if (!player) return;
+        if (!player) return;
 
-    isRemoteUpdate = true;
-    player.seekTo(data.currentTime, true);
-    player.playVideo();
-    setTimeout(() => isRemoteUpdate = false, 1000);
+        isRemoteUpdate = true;
+        player.seekTo(data.currentTime, true);
+        player.playVideo();
+        setTimeout(() => isRemoteUpdate = false, 1000);
 });
 
 socket.on('video-pause', (data) => {
-    if (!player) return;
+        if (!player) return;
 
-    isRemoteUpdate = true;
-    player.seekTo(data.currentTime, true);
-    player.pauseVideo();
-    setTimeout(() => isRemoteUpdate = false, 1000);
+        isRemoteUpdate = true;
+        player.seekTo(data.currentTime, true);
+        player.pauseVideo();
+        setTimeout(() => isRemoteUpdate = false, 1000);
 });
 
     

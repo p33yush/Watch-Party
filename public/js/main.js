@@ -22,9 +22,9 @@ function showLoading(show = true) {
     }
 }
 
-function generateRoomCode() {
-    return Math.random().toString(36).substr(2, 6).toUpperCase();
-}
+// function generateRoomCode() {
+//     return Math.random().toString(36).substr(2, 6).toUpperCase();
+// }
 
 // Create room functionality
 createRoomBtn.addEventListener('click', async () => {

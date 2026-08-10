@@ -1,83 +1,95 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const Room = require('./models/Room');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "*",
+    origin: process.env.CLIENT_ORIGIN || "http://localhost:3000",
     methods: ["GET", "POST"]
   }
 });
 
+
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static('public'));
 
 // MongoDB connection
-const mongoURI = 'mongodb+srv://01pittypatty:passMONGO@cluster0.i2e1e7y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const mongoURI = process.env.MONGO_URI;
 
 mongoose.connect(mongoURI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => {
     console.error('MongoDB connection error:', err);
-    console.log('Falling back to in-memory storage');
   });
 
-// In-memory storage for rooms (temporary)
-const rooms = new Map();
 
 // Utility function to generate room code
 function generateRoomCode() {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
+// Sanitize user input to prevent XSS and abuse
+function sanitizeInput(str, maxLength = 500) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[<>]/g, '').trim().slice(0, maxLength);
+}
+
 // API Routes
 // Create new room
-app.post('/api/rooms', (req, res) => {
-  const roomCode = generateRoomCode();
-  
-  // Make sure room code is unique
-  while (rooms.has(roomCode)) {
-    roomCode = generateRoomCode();
+app.post('/api/rooms', async (req, res) => {
+  try {
+    let roomCode = generateRoomCode();
+
+    while (await Room.findOne({
+      code: roomCode
+    })) {
+      roomCode = generateRoomCode();
+    }
+
+    const newRoom = await Room.create({
+      code: roomCode
+    });
+
+    console.log(`room created: ${roomCode}`);
+
+    res.json({ roomCode, message: 'Room created successfully' });
+  } catch (error) {
+    console.error('Error creating room:', error);
+    res.status(500).json({ message: 'Failed to create room' });
+
   }
-  
-  const newRoom = {
-    code: roomCode,
-    createdAt: new Date(),
-    currentVideo: null,
-    isPlaying: false,
-    currentTime: 0,
-    users: []
-  };
-  
-  rooms.set(roomCode, newRoom);
-  
-  console.log(`Room created: ${roomCode}`);
-  res.json({ roomCode, message: 'Room created successfully' });
 });
 
 // Get room info
-app.get('/api/rooms/:code', (req, res) => {
-  const roomCode = req.params.code.toUpperCase();
-  const room = rooms.get(roomCode);
-  
-  if (!room) {
-    return res.status(404).json({ message: 'Room not found' });
+app.get('/api/rooms/:code', async (req, res) => {
+  try {
+    const roomCode = req.params.code.toUpperCase();
+    const room = await Room.findOne({ code: roomCode });
+
+    if (!room) {
+      return res.status(404).json({ message: 'room not found' });
+    }
+
+    res.json({
+      code: room.code,
+      currentVideo: room.currentVideo,
+      isPlaying: room.isPlaying,
+      currentTime: room.currentTime,
+      userCount: room.users.length
+    });
+  } catch (error) {
+    console.error('error fetching room:', error);
+    res.status(500).json({ message: 'server issue' });
   }
-  
-  res.json({
-    code: room.code,
-    currentVideo: room.currentVideo,
-    isPlaying: room.isPlaying,
-    currentTime: room.currentTime,
-    userCount: room.users.length
-  });
 });
 
 // Basic route to serve homepage
@@ -88,34 +100,35 @@ app.get('/', (req, res) => {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('New user connected:', socket.id);
-  
+
   // Join room
-  socket.on('join-room', (data) => {
+  socket.on('join-room', async (data) => {
     const { roomCode, username } = data;
-    const room = rooms.get(roomCode);
-    
+    const room = await Room.findOne({ code: roomCode });
+
+
     if (!room) {
       socket.emit('error', { message: 'Room not found' });
       return;
     }
-    
+
     // Add user to room
-    const user = { id: socket.id, username, socketId: socket.id };
-    room.users.push(user);
-    
+    room.users.push({ socketId: socket.id, username });
+    await room.save();
+
     // Join socket room
     socket.join(roomCode);
     socket.roomCode = roomCode;
     socket.username = username;
-    
+
     console.log(`${username} joined room ${roomCode}`);
-    
+
     // Notify others in the room
     socket.to(roomCode).emit('user-joined', {
       username,
       userCount: room.users.length
     });
-    
+
     // Send current room state to the new user
     socket.emit('room-state', {
       userCount: room.users.length,
@@ -124,72 +137,82 @@ io.on('connection', (socket) => {
       currentTime: room.currentTime
     });
   });
-  
+
   // Leave room
   socket.on('leave-room', (data) => {
     handleUserLeave(socket);
   });
-  
+
   // Load video
-  socket.on('load-video', (data) => {
+  socket.on('load-video', async (data) => {
     const { roomCode, videoId, url } = data;
-    const room = rooms.get(roomCode);
-    
+    const room = await Room.findOne({ code: roomCode });
+
     if (!room) return;
-    
+
     room.currentVideo = videoId;
     room.currentTime = 0;
     room.isPlaying = false;
-    
+    await room.save();
+
     // Broadcast to all users in the room
     io.to(roomCode).emit('video-loaded', {
       videoId,
       url,
       title: 'New Video'
     });
-    
+
     console.log(`Video loaded in room ${roomCode}: ${videoId}`);
   });
-  
+
   // Video actions (play, pause, seek)
-  socket.on('video-action', (data) => {
+  socket.on('video-action', async (data) => {
     const { roomCode, action, currentTime } = data;
-    const room = rooms.get(roomCode);
-    
+    const room = await Room.findOne({ code: roomCode });
+
     if (!room) return;
-    
+
     room.currentTime = currentTime || 0;
-    
+
+    if (action === 'play') room.isPlaying = true;
+    else if (action === 'pause') room.isPlaying = false;
+    await room.save();
+
     if (action === 'play') {
-      room.isPlaying = true;
       socket.to(roomCode).emit('video-play', { currentTime });
-    } else if (action === 'pause') {
-      room.isPlaying = false;
+    }
+    else if (action === 'pause') {
       socket.to(roomCode).emit('video-pause', { currentTime });
-    } else if (action === 'seek') {
+    }
+    else if (action === 'seek') {
       socket.to(roomCode).emit('video-seek', { currentTime });
     }
   });
-  
+
   // Chat messages
-  socket.on('send-message', (data) => {
+  socket.on('send-message', async (data) => {
     const { roomCode, username, text } = data;
-    const room = rooms.get(roomCode);
-    
+    const room = await Room.findOne({ code: roomCode });
+
     if (!room) return;
-    
+
+    const cleanUsername = sanitizeInput(username, 20);
+    const cleanText = sanitizeInput(text, 500);
+
+    if (!cleanText) return;
+
     const message = {
-      username,
-      text,
+      username: cleanUsername,
+      text: cleanText,
       timestamp: new Date()
     };
-    
+
     // Broadcast message to all users in the room
     io.to(roomCode).emit('new-message', message);
-    
-    console.log(`Message in room ${roomCode} from ${username}: ${text}`);
+
+    console.log(`Message in room ${roomCode} from ${cleanUsername}: ${cleanText}`);
   });
-  
+
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
@@ -198,30 +221,33 @@ io.on('connection', (socket) => {
 });
 
 // Helper function to handle user leaving
-function handleUserLeave(socket) {
+async function handleUserLeave(socket) {
   const roomCode = socket.roomCode;
   const username = socket.username;
-  
+
   if (!roomCode) return;
-  
-  const room = rooms.get(roomCode);
+
+  const room = await Room.findOne({ code: roomCode });
   if (!room) return;
-  
+
   // Remove user from room
   room.users = room.users.filter(user => user.socketId !== socket.id);
-  
+
+  // Remove empty rooms
+  if (room.users.length === 0) {
+    await Room.deleteOne({ code: roomCode });
+    console.log(`Room ${roomCode} deleted (empty)`);
+  } else {
+    await room.save();
+  }
+
   // Notify others in the room
   socket.to(roomCode).emit('user-left', {
     username,
     userCount: room.users.length
   });
-  
-  // Remove empty rooms
-  if (room.users.length === 0) {
-    rooms.delete(roomCode);
-    console.log(`Room ${roomCode} deleted (empty)`);
-  }
-  
+
+
   console.log(`${username} left room ${roomCode}`);
 }
 
