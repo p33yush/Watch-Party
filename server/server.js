@@ -112,9 +112,17 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Add user to room
-    room.users.push({ socketId: socket.id, username });
-    await room.save();
+    // Add user to room using atomic push to prevent VersionError race conditions
+    const updatedRoom = await Room.findOneAndUpdate(
+      { code: roomCode },
+      { $push: { users: { socketId: socket.id, username } } },
+      { new: true }
+    );
+
+    if (!updatedRoom) {
+      socket.emit('error', { message: 'Room not found' });
+      return;
+    }
 
     // Join socket room
     socket.join(roomCode);
@@ -126,12 +134,12 @@ io.on('connection', (socket) => {
     // Notify others in the room
     socket.to(roomCode).emit('user-joined', {
       username,
-      userCount: room.users.length
+      userCount: updatedRoom.users.length
     });
 
     // Send current room state to the new user
     socket.emit('room-state', {
-      userCount: room.users.length,
+      userCount: updatedRoom.users.length,
       currentVideo: room.currentVideo,
       isPlaying: room.isPlaying,
       currentTime: room.currentTime
@@ -168,15 +176,11 @@ io.on('connection', (socket) => {
   // Video actions (play, pause, seek)
   socket.on('video-action', async (data) => {
     const { roomCode, action, currentTime } = data;
-    const room = await Room.findOne({ code: roomCode });
+    let update = { currentTime: currentTime || 0 };
+    if (action === 'play') update.isPlaying = true;
+    else if (action === 'pause') update.isPlaying = false;
 
-    if (!room) return;
-
-    room.currentTime = currentTime || 0;
-
-    if (action === 'play') room.isPlaying = true;
-    else if (action === 'pause') room.isPlaying = false;
-    await room.save();
+    await Room.updateOne({ code: roomCode }, { $set: update });
 
     if (action === 'play') {
       socket.to(roomCode).emit('video-play', { currentTime });
@@ -227,24 +231,24 @@ async function handleUserLeave(socket) {
 
   if (!roomCode) return;
 
-  const room = await Room.findOne({ code: roomCode });
-  if (!room) return;
+  const updatedRoom = await Room.findOneAndUpdate(
+    { code: roomCode },
+    { $pull: { users: { socketId: socket.id } } },
+    { new: true }
+  );
 
-  // Remove user from room
-  room.users = room.users.filter(user => user.socketId !== socket.id);
+  if (!updatedRoom) return;
 
   // Remove empty rooms
-  if (room.users.length === 0) {
+  if (updatedRoom.users.length === 0) {
     await Room.deleteOne({ code: roomCode });
     console.log(`Room ${roomCode} deleted (empty)`);
-  } else {
-    await room.save();
   }
 
   // Notify others in the room
   socket.to(roomCode).emit('user-left', {
     username,
-    userCount: room.users.length
+    userCount: updatedRoom.users.length
   });
 
 
